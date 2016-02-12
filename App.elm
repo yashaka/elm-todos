@@ -28,11 +28,36 @@ type Action
   = NoOp
   | UpdateField String
   | Add
+  | Check Int Bool
+
+
+type alias Task =
+  { description : String
+  , completed : Bool
+  , id : Int
+  }
 
 
 type alias Model =
-  { todos : List String
+  { tasks : List Task
   , field : String
+  , uid : Int
+  }
+
+
+newTask : String -> Int -> Task
+newTask desc id =
+  { description = desc
+  , completed = False
+  , id = id
+  }
+
+
+initialModel : Model
+initialModel =
+  { field = ""
+  , tasks = []
+  , uid = 0
   }
 
 
@@ -47,51 +72,62 @@ update action model =
 
     Add ->
       { model
-      | field = ""
-      , todos =
+      | uid = model.uid + 1
+      , field = ""
+      , tasks =
           let
-            cleanField = String.trim model.field
+            desc = String.trim model.field
           in
-            if String.isEmpty cleanField
-              then model.todos
-              else model.todos ++ [ cleanField ]
+            if String.isEmpty desc
+              then model.tasks
+              else model.tasks ++ [ newTask desc model.uid ]
       }
 
+    Check id isCompleted ->
+      let
+        updateTask t =
+          if t.id == id then { t | completed = isCompleted } else t
+      in
+        { model | tasks = List.map updateTask model.tasks }
 
-initialModel : Model
-initialModel =
-  { field = ""
-  , todos = []
-  }
 
-
-todoInput : Address Action -> String -> Html
-todoInput address todo =
+taskInput : Address Action -> String -> Html
+taskInput address desc =
   input
     [ placeholder "What needs to be done?"
     , autofocus True
-    , value todo
+    , value desc
     , onInput address UpdateField
     , onEnter address Add
     ]
     []
 
 
-todoList : List String -> Html
-todoList todos =
-  ul [] (List.map todoListItem todos)
+taskList : Address Action -> List Task -> Html
+taskList address tasks =
+  ul [] (List.map (todoItem address) tasks)
 
 
-todoListItem : String -> Html
-todoListItem todo =
-  li [] [ text todo ]
+todoItem : Address Action -> Task -> Html
+todoItem address todo =
+  li []
+    [ input
+        [ type' "checkbox"
+        , onClick address (Check todo.id (not todo.completed))
+        ]
+        []
+    , span
+        [ classList [ ("is-completed", todo.completed) ]
+        ]
+        [ text todo.description ]
+    ]
 
 
 view : Address Action -> Model -> Html
 view address model =
   div []
-    [ todoInput address model.field
-    , todoList model.todos
+    [ taskInput address model.field
+    , taskList address model.tasks
     -- Useful for debugging purposes
     -- , fromElement (show model)
     ]
