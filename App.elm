@@ -24,6 +24,11 @@ onEnter address value =
       (\_ -> Signal.message address value)
 
 
+pluralize : String -> String -> Int -> String
+pluralize singular plural n =
+  if n == 1 then singular else plural
+
+
 type Action
   = NoOp
   | UpdateField String
@@ -135,11 +140,25 @@ todoItem address todo =
     ]
 
 
+footer : List Task -> Html
+footer tasks =
+  itemsLeft (List.length tasks)
+
+
+itemsLeft : Int -> Html
+itemsLeft n =
+  if n == 0 then
+    div [] []
+  else
+    text <| (toString n) ++ " " ++ (pluralize "item" "items" n)  ++ " left"
+
+
 view : Address Action -> Model -> Html
 view address model =
   div []
     [ taskInput address model.field
     , taskList address model.tasks
+    , footer model.tasks
     -- Useful for debugging purposes
     -- , fromElement (show model)
     ]
