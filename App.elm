@@ -114,7 +114,10 @@ taskList address tasks =
 
 todoItem : Address Action -> Task -> Html
 todoItem address todo =
-  li [ key (toString todo.id) ]
+  li
+    [ key (toString todo.id)
+    , class "todo-item"
+    ]
     [ input
         [ type' "checkbox"
         , onClick address (Check todo.id (not todo.completed))
@@ -126,6 +129,7 @@ todoItem address todo =
         [ text todo.description ]
     , button
         [ onClick address (Delete todo.id)
+        , class "destroy"
         ]
         [ text "x" ]
     ]

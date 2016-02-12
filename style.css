@@ -1,3 +1,11 @@
 .is-completed {
   text-decoration: line-through;
 }
+
+.destroy {
+  display: none;
+}
+
+.todo-item:hover .destroy {
+  display: inline;
+}
