@@ -114,7 +114,7 @@ taskList address tasks =
 
 todoItem : Address Action -> Task -> Html
 todoItem address todo =
-  li []
+  li [ key (toString todo.id) ]
     [ input
         [ type' "checkbox"
         , onClick address (Check todo.id (not todo.completed))
