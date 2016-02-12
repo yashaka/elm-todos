@@ -35,6 +35,7 @@ type Action
   | Add
   | Check Int Bool
   | Delete Int
+  | DeleteComplete
 
 
 type alias Task =
@@ -99,6 +100,9 @@ update action model =
     Delete id ->
       { model | tasks = List.filter (\t -> t.id /= id) model.tasks }
 
+    DeleteComplete ->
+      { model | tasks = List.filter (not << .completed) model.tasks }
+
 
 taskInput : Address Action -> String -> Html
 taskInput address desc =
@@ -140,17 +144,37 @@ todoItem address todo =
     ]
 
 
-footer : List Task -> Html
-footer tasks =
-  itemsLeft (List.length tasks)
+footer : Address Action -> List Task -> Html
+footer address tasks =
+  let
+    completedTasks = List.filter .completed tasks
+    numTasks = List.length tasks
+    numCompletedTasks = List.length completedTasks
+    numRemainingTasks = numTasks - numCompletedTasks
+  in
+    div []
+      [ itemsRemaining numTasks numRemainingTasks
+      , clearCompleted address numCompletedTasks
+      ]
 
 
-itemsLeft : Int -> Html
-itemsLeft n =
+itemsRemaining : Int -> Int -> Html
+itemsRemaining m n =
+  if m == 0 then
+    div [] []
+  else
+    text <| (toString n) ++ " " ++ (pluralize "item" "items" n)  ++ " remaining"
+
+
+clearCompleted : Address Action -> Int -> Html
+clearCompleted address n =
   if n == 0 then
     div [] []
   else
-    text <| (toString n) ++ " " ++ (pluralize "item" "items" n)  ++ " left"
+    div []
+      [ button [ onClick address DeleteComplete ]
+          [ text "Clear completed" ]
+      ]
 
 
 view : Address Action -> Model -> Html
@@ -158,7 +182,7 @@ view address model =
   div []
     [ taskInput address model.field
     , taskList address model.tasks
-    , footer model.tasks
+    , footer address model.tasks
     -- Useful for debugging purposes
     -- , fromElement (show model)
     ]
