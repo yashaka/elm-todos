@@ -29,6 +29,7 @@ type Action
   | UpdateField String
   | Add
   | Check Int Bool
+  | Delete Int
 
 
 type alias Task =
@@ -90,6 +91,9 @@ update action model =
       in
         { model | tasks = List.map updateTask model.tasks }
 
+    Delete id ->
+      { model | tasks = List.filter (\t -> t.id /= id) model.tasks }
+
 
 taskInput : Address Action -> String -> Html
 taskInput address desc =
@@ -120,6 +124,10 @@ todoItem address todo =
         [ classList [ ("is-completed", todo.completed) ]
         ]
         [ text todo.description ]
+    , button
+        [ onClick address (Delete todo.id)
+        ]
+        [ text "x" ]
     ]
 
 
