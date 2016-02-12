@@ -34,6 +34,7 @@ type Action
   | UpdateField String
   | Add
   | Check Int Bool
+  | CheckAll Bool
   | Delete Int
   | DeleteComplete
 
@@ -97,6 +98,12 @@ update action model =
       in
         { model | tasks = List.map updateTask model.tasks }
 
+    CheckAll isCompleted ->
+      let
+        updateTask t = { t | completed = isCompleted }
+      in
+        { model | tasks = List.map updateTask model.tasks }
+
     Delete id ->
       { model | tasks = List.filter (\t -> t.id /= id) model.tasks }
 
@@ -116,6 +123,28 @@ taskInput address desc =
     []
 
 
+markAllCompleted : Address Action -> List Task -> Html
+markAllCompleted address tasks =
+  let
+    allCompleted = List.all .completed tasks
+  in
+    if List.isEmpty tasks then
+      div [] []
+    else
+      div []
+        [ input
+            [ id "toggle-all"
+            , type' "checkbox"
+            , checked allCompleted
+            , onClick address (CheckAll (not allCompleted))
+            ]
+            []
+        , label
+            [ for "toggle-all" ]
+            [ text "Mark all as completed" ]
+        ]
+
+
 taskList : Address Action -> List Task -> Html
 taskList address tasks =
   ul [] (List.map (todoItem address) tasks)
@@ -129,6 +158,7 @@ todoItem address todo =
     ]
     [ input
         [ type' "checkbox"
+        , checked todo.completed
         , onClick address (Check todo.id (not todo.completed))
         ]
         []
@@ -181,6 +211,7 @@ view : Address Action -> Model -> Html
 view address model =
   div []
     [ taskInput address model.field
+    , markAllCompleted address model.tasks
     , taskList address model.tasks
     , footer address model.tasks
     -- Useful for debugging purposes
