@@ -32,6 +32,8 @@ pluralize singular plural n =
 type Action
   = NoOp
   | UpdateField String
+  | EditingTask Int Bool
+  | UpdateTask Int String
   | Add
   | Check Int Bool
   | CheckAll Bool
@@ -42,6 +44,7 @@ type Action
 type alias Task =
   { description : String
   , completed : Bool
+  , editing : Bool
   , id : Int
   }
 
@@ -57,6 +60,7 @@ newTask : String -> Int -> Task
 newTask desc id =
   { description = desc
   , completed = False
+  , editing = False
   , id = id
   }
 
@@ -77,6 +81,18 @@ update action model =
 
     UpdateField str ->
       { model | field = str }
+
+    EditingTask id isEditing ->
+      let
+        updateTask t = if t.id == id then { t | editing = isEditing } else t
+      in
+        { model | tasks = List.map updateTask model.tasks }
+
+    UpdateTask id newDesc ->
+      let
+        updateTask t = if t.id == id then { t | description = newDesc } else t
+      in
+        { model | tasks = List.map updateTask model.tasks }
 
     Add ->
       { model
@@ -156,6 +172,16 @@ todoItem address todo =
     [ key (toString todo.id)
     , class "todo-item"
     ]
+    [ if todo.editing then
+        todoItemEdit address todo
+      else
+        todoItemView address todo
+    ]
+
+
+todoItemView : Address Action -> Task -> Html
+todoItemView address todo =
+  div []
     [ input
         [ type' "checkbox"
         , checked todo.completed
@@ -164,6 +190,7 @@ todoItem address todo =
         []
     , span
         [ classList [ ("is-completed", todo.completed) ]
+        , onDoubleClick address (EditingTask todo.id True)
         ]
         [ text todo.description ]
     , button
@@ -173,6 +200,18 @@ todoItem address todo =
         [ text "x" ]
     ]
 
+todoItemEdit : Address Action -> Task -> Html
+todoItemEdit address todo =
+  div []
+    [ input
+        [ id ("todo-" ++ toString todo.id)
+        , value todo.description
+        , onInput address (UpdateTask todo.id)
+        , onBlur address (EditingTask todo.id False)
+        , onEnter address (EditingTask todo.id False)
+        ]
+        []
+    ]
 
 footer : Address Action -> List Task -> Html
 footer address tasks =
@@ -224,11 +263,37 @@ inbox =
   Signal.mailbox NoOp
 
 
+actions : Signal Action
+actions =
+  inbox.signal
+
+
 model : Signal Model
 model =
-  Signal.foldp update initialModel inbox.signal
+  Signal.foldp update initialModel actions
 
 
 main : Signal Html
 main =
   Signal.map (view inbox.address) model
+
+
+-- Tell JavaScript the id of the element we want to focus
+port focus : Signal String
+port focus =
+  let
+    needsFocus action =
+      case action of
+        EditingTask _ True -> True
+        _ -> False
+
+    toSelector action =
+      case action of
+        EditingTask id True -> "todo-" ++ toString id
+        _ -> ""
+  in
+    actions
+      -- The values on the following signal
+      -- would have the form (EditingTask id True)
+      |> Signal.filter needsFocus (EditingTask 0 True)
+      |> Signal.map toSelector

@@ -7,6 +7,28 @@
   </head>
   <body>
     <script src="app.js"></script>
-    <script>Elm.fullscreen(Elm.App);</script>
+    <script>
+      var app = Elm.fullscreen(Elm.App);
+
+      app.ports.focus.subscribe(function (selector) {
+        var FOCUS_DELAY = 50;
+        var MAX_RETRIES = 3;
+
+        function focus(retries) {
+          var elem = document.getElementById(selector);
+          if (elem) {
+            elem.focus();
+          } else {
+            if (retries === MAX_RETRIES) {
+              console.error('We encountered an error while trying to focus the element with id ' + selector)
+            } else {
+              setTimeout(function() { focus(retries + 1); }, FOCUS_DELAY);
+            }
+          }
+        }
+
+        setTimeout(function() { focus(0); }, FOCUS_DELAY);
+      });
+    </script>
   </body>
 </html>
