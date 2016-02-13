@@ -39,6 +39,7 @@ type Action
   | CheckAll Bool
   | Delete Int
   | DeleteComplete
+  | SetVisibilityFilter Visibility
 
 
 type alias Task =
@@ -49,10 +50,14 @@ type alias Task =
   }
 
 
+type Visibility = All | Active | Completed
+
+
 type alias Model =
   { tasks : List Task
   , field : String
   , uid : Int
+  , visibilityFilter : Visibility
   }
 
 
@@ -70,6 +75,7 @@ initialModel =
   { field = ""
   , tasks = []
   , uid = 0
+  , visibilityFilter = All
   }
 
 
@@ -126,6 +132,9 @@ update action model =
     DeleteComplete ->
       { model | tasks = List.filter (not << .completed) model.tasks }
 
+    SetVisibilityFilter visibilityFilter ->
+      { model | visibilityFilter = visibilityFilter }
+
 
 taskInput : Address Action -> String -> Html
 taskInput address desc =
@@ -161,9 +170,16 @@ markAllCompleted address tasks =
         ]
 
 
-taskList : Address Action -> List Task -> Html
-taskList address tasks =
-  ul [] (List.map (todoItem address) tasks)
+taskList : Address Action -> Visibility -> List Task -> Html
+taskList address visibilityFilter tasks =
+  let
+    isVisible todo =
+      case visibilityFilter of
+        All -> True
+        Active -> not todo.completed
+        Completed -> todo.completed
+  in
+    ul [] (List.map (todoItem address) (List.filter isVisible tasks))
 
 
 todoItem : Address Action -> Task -> Html
@@ -200,6 +216,7 @@ todoItemView address todo =
         [ text "x" ]
     ]
 
+
 todoItemEdit : Address Action -> Task -> Html
 todoItemEdit address todo =
   div []
@@ -213,8 +230,9 @@ todoItemEdit address todo =
         []
     ]
 
-footer : Address Action -> List Task -> Html
-footer address tasks =
+
+footer : Address Action -> Visibility -> List Task -> Html
+footer address visibilityFilter tasks =
   let
     completedTasks = List.filter .completed tasks
     numTasks = List.length tasks
@@ -224,6 +242,16 @@ footer address tasks =
     div []
       [ itemsRemaining numTasks numRemainingTasks
       , clearCompleted address numCompletedTasks
+      , if numTasks == 0 then
+          div [] []
+        else
+          div []
+            [ visibilityFilterLink address "#/" "All" All visibilityFilter
+            , text " | "
+            , visibilityFilterLink address "#/active" "Active" Active visibilityFilter
+            , text " | "
+            , visibilityFilterLink address "#/completed" "Completed" Completed visibilityFilter
+            ]
       ]
 
 
@@ -246,13 +274,25 @@ clearCompleted address n =
       ]
 
 
+visibilityFilterLink : Address Action -> String -> String -> Visibility -> Visibility -> Html
+visibilityFilterLink address fragmentId linkText visibilityFilter currentVisibilityFilter =
+  if visibilityFilter == currentVisibilityFilter then
+    span [] [ text linkText ]
+  else
+    a
+      [ onClick address (SetVisibilityFilter visibilityFilter)
+      , href fragmentId
+      ]
+      [ text linkText ]
+
+
 view : Address Action -> Model -> Html
 view address model =
   div []
     [ taskInput address model.field
     , markAllCompleted address model.tasks
-    , taskList address model.tasks
-    , footer address model.tasks
+    , taskList address model.visibilityFilter model.tasks
+    , footer address model.visibilityFilter model.tasks
     -- Useful for debugging purposes
     -- , fromElement (show model)
     ]
