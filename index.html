@@ -8,7 +8,12 @@
   <body>
     <script src="app.js"></script>
     <script>
-      var app = Elm.fullscreen(Elm.App);
+      var APP_STORAGE_KEY = 'elm-todos-state';
+
+      var storedState = localStorage.getItem(APP_STORAGE_KEY);
+      var startingState = storedState ? JSON.parse(storedState) : null;
+
+      var app = Elm.fullscreen(Elm.App, { restoreState: startingState });
 
       app.ports.focus.subscribe(function (selector) {
         var FOCUS_DELAY = 50;
@@ -28,6 +33,10 @@
         }
 
         setTimeout(function() { focus(0); }, FOCUS_DELAY);
+      });
+
+      app.ports.saveState.subscribe(function (state) {
+        localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(state));
       });
     </script>
   </body>

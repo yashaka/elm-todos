@@ -29,6 +29,9 @@ pluralize singular plural n =
   if n == 1 then singular else plural
 
 
+type alias Visibility = String
+
+
 type Action
   = NoOp
   | UpdateField String
@@ -50,9 +53,6 @@ type alias Task =
   }
 
 
-type Visibility = All | Active | Completed
-
-
 type alias Model =
   { tasks : List Task
   , field : String
@@ -70,12 +70,12 @@ newTask desc id =
   }
 
 
-initialModel : Model
-initialModel =
+emptyModel : Model
+emptyModel =
   { field = ""
   , tasks = []
   , uid = 0
-  , visibilityFilter = All
+  , visibilityFilter = "All"
   }
 
 
@@ -175,9 +175,10 @@ taskList address visibilityFilter tasks =
   let
     isVisible todo =
       case visibilityFilter of
-        All -> True
-        Active -> not todo.completed
-        Completed -> todo.completed
+        "Completed" -> todo.completed
+        "Active" -> not todo.completed
+        _ -> True
+
   in
     ul [] (List.map (todoItem address) (List.filter isVisible tasks))
 
@@ -246,11 +247,11 @@ footer address visibilityFilter tasks =
           div [] []
         else
           div []
-            [ visibilityFilterLink address "#/" "All" All visibilityFilter
+            [ visibilityFilterLink address "#/" "All" visibilityFilter
             , text " | "
-            , visibilityFilterLink address "#/active" "Active" Active visibilityFilter
+            , visibilityFilterLink address "#/active" "Active" visibilityFilter
             , text " | "
-            , visibilityFilterLink address "#/completed" "Completed" Completed visibilityFilter
+            , visibilityFilterLink address "#/completed" "Completed" visibilityFilter
             ]
       ]
 
@@ -274,16 +275,16 @@ clearCompleted address n =
       ]
 
 
-visibilityFilterLink : Address Action -> String -> String -> Visibility -> Visibility -> Html
-visibilityFilterLink address fragmentId linkText visibilityFilter currentVisibilityFilter =
+visibilityFilterLink : Address Action -> String -> Visibility -> Visibility -> Html
+visibilityFilterLink address fragmentId visibilityFilter currentVisibilityFilter =
   if visibilityFilter == currentVisibilityFilter then
-    span [] [ text linkText ]
+    span [] [ text visibilityFilter ]
   else
     a
       [ onClick address (SetVisibilityFilter visibilityFilter)
       , href fragmentId
       ]
-      [ text linkText ]
+      [ text visibilityFilter ]
 
 
 view : Address Action -> Model -> Html
@@ -306,6 +307,11 @@ inbox =
 actions : Signal Action
 actions =
   inbox.signal
+
+
+initialModel : Model
+initialModel =
+  Maybe.withDefault emptyModel restoreState
 
 
 model : Signal Model
@@ -337,3 +343,11 @@ port focus =
       -- would have the form (EditingTask id True)
       |> Signal.filter needsFocus (EditingTask 0 True)
       |> Signal.map toSelector
+
+
+port saveState : Signal Model
+port saveState =
+  model
+
+
+port restoreState : Maybe Model
